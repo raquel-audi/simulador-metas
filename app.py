@@ -62,13 +62,7 @@ def buscar_cdi():
     except:
         return 14.65
 
-CDI = buscar_cdi()
-
-cenarios = {
-    "Conservador": (CDI * 0.85) / 100,
-    "Moderado": (CDI * 1.0) / 100,
-    "Otimista": (CDI * 1.2) / 100,
-}
+CDI_HOJE = buscar_cdi()  # apenas informativo — NÃO é usado na projeção
 
 cores = {"Conservador": "#C4A882", "Moderado": "#d94d26", "Otimista": "#7c1c12"}
 
@@ -119,9 +113,37 @@ with col_logo:
     st.image("logo.svg", width=170)
 with col_titulo:
     st.title("Simulador de Metas Financeiras")
-    st.caption(f"CDI atual: {CDI:.2f}% a.a.")
+    st.caption(f"CDI hoje: {CDI_HOJE:.2f}% a.a. (só referência — não é usado na projeção)")
 
 st.markdown("<hr style='border: none; border-top: 2px solid #7c1c12; margin-top: 0;'>", unsafe_allow_html=True)
+
+# ---------- PREMISSAS (índices juntos no topo) ----------
+# CDI e inflação de longo prazo ficam aqui em cima, valendo para todas as metas.
+col_cdi, col_inf, col_tog = st.columns([1, 1, 1.4], vertical_alignment="bottom")
+with col_cdi:
+    cdi_projecao = st.number_input(
+        "CDI de projeção (% a.a.)",
+        min_value=0.0, value=10.0, step=0.5,
+        help="Para o longo prazo usa-se uma média histórica (~10%), não o CDI de hoje, "
+             "que sobe e desce demais. Troque aqui se quiser testar outro valor."
+    )
+with col_inf:
+    inflacao_input = st.number_input(
+        "Inflação anual (% a.a.)",
+        min_value=0.0, value=5.0, step=0.5,
+        help="Usada quando 'Descontar inflação' estiver ligado, para mostrar os "
+             "valores no poder de compra de hoje."
+    )
+with col_tog:
+    considerar_inflacao = st.toggle("Descontar inflação (valores de hoje)", value=False)
+
+CDI = cdi_projecao
+inflacao_anual = inflacao_input / 100
+cenarios = {
+    "Conservador": (CDI * 0.85) / 100,
+    "Moderado": (CDI * 1.0) / 100,
+    "Otimista": (CDI * 1.2) / 100,
+}
 
 # ---------- FUNÇÃO DA META ----------
 def salvar_nome(id_meta):
@@ -142,9 +164,6 @@ def render_meta(id_meta):
     with col2:
         valor_inicial = st.number_input("Valor inicial (R$)", min_value=0.0, value=50000.0, step=5000.0, key=f"inicial_{id_meta}")
         aporte_mensal = st.number_input("Aporte mensal (R$)", min_value=0.0, value=2000.0, step=500.0, key=f"aporte_{id_meta}")
-        considerar_inflacao = st.toggle("Descontar inflação (valores de hoje)", value=False, key=f"inflacao_{id_meta}")
-        if considerar_inflacao:
-            inflacao_anual = st.number_input("Inflação anual estimada (%)", min_value=0.0, value=5.0, step=0.5, key=f"taxa_inflacao_{id_meta}") / 100
         aumento_aporte = st.number_input("Aumento anual do aporte (%)", min_value=0.0, value=0.0, step=1.0, key=f"aumento_{id_meta}") / 100
 
     meses = prazo_anos * 12
